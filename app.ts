@@ -52,7 +52,6 @@ const api = createApplication({
 })
 
 const app = express()
-const port = 3000
 
 app.use(
   "/graphql",
@@ -64,6 +63,6 @@ app.use(
   })
 )
 
-app.listen(port, () => {
-  console.log(`Application running on port ${port}.`)
-})
+app.listen(process.env.LOCAL_PORT ?? 4000, () =>
+  console.log(` App is running on port ${process.env.LOCAL_PORT ?? 4000}`)
+)
