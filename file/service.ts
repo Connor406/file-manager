@@ -1,16 +1,16 @@
-import { File, Prisma, PrismaClient } from ".prisma/client"
+import { File, FileVersion, Prisma, PrismaClient } from ".prisma/client"
 import { generateId } from "../util/generators"
 import { getBucket } from "../bucket/bucket"
+import { CreateFileVersionInput } from "../fileVersion"
 
 // Creates type 'CreateFileInput', making it self-update if model changes
 const fileInputFields = Prisma.validator<Prisma.FileArgs>()({
   select: { name: true, directoryId: true },
 })
-export type CreateFileInput = Prisma.FileGetPayload<typeof fileInputFields> & {
-  key?: string
-  mimeType: string
-  size: number
-}
+export type CreateFileInput = Prisma.FileGetPayload<typeof fileInputFields> &
+  Omit<CreateFileVersionInput, "fileId" | "key"> & {
+    key?: FileVersion["key"]
+  }
 
 export async function createFileRecord(
   client: PrismaClient,
