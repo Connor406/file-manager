@@ -1,4 +1,4 @@
-import { Directory, PrismaClient } from ".prisma/client"
+import { Directory, Prisma, PrismaClient } from ".prisma/client"
 import { deleteFile } from "../file"
 
 export async function createDirectory(
@@ -59,4 +59,16 @@ export async function deleteDirectory(client: PrismaClient, id: Directory["id"])
   }
   await client.directory.delete({ where: { id } })
   return true
+}
+
+export async function findDirectories(client: PrismaClient, query: string): Promise<Directory[]> {
+  return await client.directory.findMany({
+    where: {
+      name: {
+        contains: query,
+        mode: "insensitive",
+      },
+    },
+    orderBy: [{ name: "asc" }],
+  })
 }
