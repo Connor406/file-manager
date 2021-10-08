@@ -27,6 +27,7 @@ export const directoryModule = createModule({
       type Mutation {
         createDirectory(name: String!, parentId: String!): Directory!
         renameDirectory(id: ID!, name: String!): Directory!
+        moveDirectory(id: ID!, parentId: ID!): Directory!
         deleteDirectory(id: ID!): Boolean!
       }
     `,
@@ -55,6 +56,12 @@ export const directoryModule = createModule({
         { id, name }: { id: Directory["id"]; name: Directory["name"] }
       ): Promise<Directory> => {
         return await directoryService.renameDirectory(prismaClient(), id, name)
+      },
+      moveDirectory: async (
+        _: unknown,
+        { id, parentId }: { id: Directory["id"]; parentId: Directory["id"] }
+      ): Promise<Directory> => {
+        return await directoryService.moveDirectory(prismaClient(), id, parentId)
       },
       deleteDirectory: async (_: unknown, { id }: { id: Directory["id"] }): Promise<boolean> => {
         return await directoryService.deleteDirectory(prismaClient(), id)

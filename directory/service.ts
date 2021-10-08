@@ -52,6 +52,117 @@ export async function renameDirectory(
   })
 }
 
+export async function moveDirectory(
+  client: PrismaClient,
+  id: Directory["id"],
+  parentId: Directory["id"]
+): Promise<Directory> {
+  const thisDirectory = await client.directory.findUnique({
+    where: { id },
+    include: { files: true, directories: true },
+  })
+  if (!thisDirectory) throw new Error("Invalid directory")
+  const destinationDirectory = await client.directory.findUnique({
+    where: { id: parentId },
+  })
+
+  if (!destinationDirectory || destinationDirectory.ancestors.includes(id)) {
+    throw new Error("Invalid target directory")
+  }
+
+  const previousAncestors = thisDirectory.ancestors
+  const destinationAncestors = destinationDirectory.ancestors
+
+  const childFilesOfThisDirectory = await client.file.findMany({
+    where: { directoryId: id },
+    // instead of SELECT *, limits to only selecting these values
+    select: { id: true, ancestors: true },
+  })
+  const descendentFilesOfThisDirectory = await client.file.findMany({
+    where: {
+      ancestors: {
+        has: thisDirectory.id,
+      },
+    },
+    select: { id: true, ancestors: true },
+  })
+  const descendantDirectoriesOfThisDirectory = await client.directory.findMany({
+    where: {
+      ancestors: {
+        has: thisDirectory.id,
+      },
+    },
+    select: { id: true, ancestors: true },
+  })
+
+  const descendantAncestorUpdates = [
+    ...childFilesOfThisDirectory.map(file => {
+      const updatedAncestors = [...destinationAncestors, destinationDirectory.id, thisDirectory.id]
+      return client.file.update({
+        where: { id: file.id },
+        data: {
+          ancestors: updatedAncestors,
+        },
+      })
+    }),
+    ...descendentFilesOfThisDirectory.map(file => {
+      const updatedAncestors = [
+        ...new Set([
+          //  the Set de-duplicates this array
+          ...file.ancestors.filter(a => !previousAncestors.includes(a)),
+          ...destinationAncestors,
+          destinationDirectory.id,
+          thisDirectory.id,
+        ]),
+      ]
+      return client.file.update({
+        where: { id: file.id },
+        data: {
+          ancestors: updatedAncestors,
+        },
+      })
+    }),
+    ...descendantDirectoriesOfThisDirectory.map(directory => {
+      const updatedAncestors = [
+        ...new Set([
+          ...directory.ancestors.filter(a => !previousAncestors.includes(a)),
+          ...destinationAncestors,
+          destinationDirectory.id,
+          thisDirectory.id,
+        ]),
+      ]
+      return client.directory.update({
+        where: { id: directory.id },
+        data: {
+          ancestors: updatedAncestors,
+        },
+      })
+    }),
+  ]
+
+  const childDirectoryAncestorUpdates = client.directory.updateMany({
+    where: { parentId: thisDirectory.id },
+    data: { ancestors: [...destinationAncestors, destinationDirectory.id, thisDirectory.id] },
+  })
+
+  await client.$transaction([
+    ...descendantAncestorUpdates,
+    childDirectoryAncestorUpdates,
+    client.directory.update({
+      where: { id: thisDirectory.id },
+      data: {
+        parentId: destinationDirectory.id,
+        ancestors: [...destinationAncestors, destinationDirectory.id],
+      },
+    }),
+  ])
+
+  return (await client.directory.findUnique({
+    where: { id },
+    include: { directories: true, files: true },
+  })) as Directory
+}
+
 export async function deleteDirectory(client: PrismaClient, id: Directory["id"]): Promise<boolean> {
   const files = await client.file.findMany({
     where: { ancestors: { has: id } },
