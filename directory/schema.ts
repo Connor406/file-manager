@@ -21,6 +21,7 @@ export const directoryModule = createModule({
         ancestors: [String]!
         children: Int!
         size: Int
+        deletedAt: String
       }
 
       type DirectoryContentsResult {

@@ -63,7 +63,7 @@ export async function getFileVersions(
     ...(pagination
       ? { skip: (pagination.page - 1) * pagination.pageLength, take: pagination.pageLength }
       : {}),
-    where: { fileId },
+    where: { fileId, deletedAt: null },
   })
 }
 

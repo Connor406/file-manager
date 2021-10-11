@@ -16,6 +16,7 @@ export const fileModule = createModule({
         updatedAt: String!
         versions: [FileVersion]!
         ancestors: [String]!
+        deletedAt: String
       }
 
       input CreateFileInput {

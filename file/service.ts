@@ -40,13 +40,11 @@ export async function createFileRecord(
   return { file: fileData, url }
 }
 
-// get file
-// move
-// update
-// delete
-
 export async function getFile(client: PrismaClient, id: File["id"]): Promise<File | null> {
-  return await client.file.findUnique({ where: { id }, include: { versions: true } })
+  return await client.file.findUnique({
+    where: { id },
+    include: { versions: { where: { deletedAt: null } } },
+  })
 }
 
 export async function moveFile(
@@ -103,6 +101,6 @@ export async function findFiles(client: PrismaClient, query: string): Promise<Fi
       },
     },
     orderBy: [{ name: "asc" }],
-    include: { versions: true },
+    include: { versions: { where: { deletedAt: null } } },
   })
 }
