@@ -14,6 +14,7 @@ export const fileModule = createModule({
         directoryId: ID!
         createdAt: String!
         updatedAt: String!
+        history: JSON
         versions: [FileVersion]!
         ancestors: [String]!
         deletedAt: String
