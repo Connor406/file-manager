@@ -2,6 +2,7 @@ import { FileVersion, PrismaClient, Prisma, File } from "@prisma/client"
 import { generateId } from "../util/generators"
 import { getBucket } from "../bucket"
 import { Pagination } from "../app"
+import { updateFileHistory } from "../file"
 
 const fileVersionInputFields = Prisma.validator<Prisma.FileVersionArgs>()({
   select: { fileId: true, name: true, mimeType: true, size: true },
@@ -33,7 +34,12 @@ export async function createFileVersionRecord(
     },
     include: { file: true },
   })
-
+  await client.file.update({
+    where: { id: file.id },
+    data: {
+      history: await updateFileHistory(client, file.id, { version: JSON.stringify(version) }),
+    },
+  })
   const bucket = getBucket()
   if (bucket) {
     const url = await bucket.getSignedUrl("put", key)

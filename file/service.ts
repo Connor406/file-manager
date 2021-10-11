@@ -93,11 +93,13 @@ export async function moveFile(
     throw new Error("Invalid target directory")
   }
   const { ancestors } = directory
+  const updatedHistory = await updateFileHistory(client, id, { directory: directory.id })
   return await client.file.update({
     where: { id },
     data: {
       directoryId,
       ancestors: [...ancestors, directoryId],
+      history: updatedHistory,
     },
     include: { versions: true },
   })
@@ -108,17 +110,21 @@ export async function renameFile(
   id: File["id"],
   name: File["name"]
 ): Promise<File> {
-  return await client.file.update({ where: { id }, data: { name }, include: { versions: true } })
+  const updatedHistory = await updateFileHistory(client, id, { name })
+  return await client.file.update({
+    where: { id },
+    data: { name, history: updatedHistory },
+    include: { versions: true },
+  })
 }
 
 export async function deleteFile(client: PrismaClient, id: File["id"]): Promise<boolean> {
   // When deleting file, also want to delete all fileVersion relations also
   //* COOL THING: Can chain on '.versions()' to return array of related versions from this file
   const versions = await client.file.findUnique({ where: { id } }).versions()
-
-  // $transaction takes an array of transactions as Promises
-  // if any item fails, entire thing is rolled back, error thrown
+  const updatedHistory = await updateFileHistory(client, id, { deleted: true })
   await client.$transaction([
+    client.file.update({ where: { id }, data: { history: updatedHistory } }),
     client.fileVersion.deleteMany({ where: { fileId: id } }),
     client.file.delete({ where: { id } }),
   ])
